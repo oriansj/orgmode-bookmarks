@@ -51,7 +51,7 @@ def generate_guid():
 def Import_moz_places():
 	for i in range(0, 300):
 		random_string = generate_guid()
-            	insert = "INSERT INTO moz_places (id, url, guid) VALUES ( " + str(i) + ", 'http://" + str(i) + ".com', '" + random_string + "')"
+            	insert = "INSERT INTO moz_places (id, url) VALUES ( " + str(i) + ", 'http://" + str(i) + ".com')"
 		cur.execute(insert)
 
 def Import_moz_items_annos():
