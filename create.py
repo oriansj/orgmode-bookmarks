@@ -5,11 +5,14 @@ import os
 import string
 import random
 
+# Create a new blank file
 open('test.sqlite', 'w+').close()
-con = sqlite3.connect('test.sqlite')
 
+# Connect to that file
+con = sqlite3.connect('test.sqlite')
 cur = con.cursor()
 
+# Create ALL of the Tables
 def create_tables():
 	cur.execute("CREATE TABLE moz_anno_attributes ( id INTEGER,name VARCHAR(32) NOT NULL, PRIMARY KEY(id));")
 	cur.execute("CREATE TABLE moz_annos ( id INTEGER, place_id INTEGER NOT NULL, anno_attribute_id INTEGER, mime_type VARCHAR(32), content LONGVARCHAR, flags INTEGER DEFAULT '0', expiration INTEGER DEFAULT '0', type INTEGER DEFAULT '0', dateAdded INTEGER DEFAULT '0', lastModified INTEGER DEFAULT '0', PRIMARY KEY(id));")
@@ -23,6 +26,7 @@ def create_tables():
 	cur.execute("CREATE TABLE moz_keywords ( id INTEGER PRIMARY KEY AUTOINCREMENT, keyword TEXT, place_id INTEGER, post_data TEXT);")
 	cur.execute("CREATE TABLE moz_places ( id INTEGER, url LONGVARCHAR, title LONGVARCHAR, rev_host LONGVARCHAR, visit_count INTEGER DEFAULT '0', hidden INTEGER NOT NULL DEFAULT '0', typed INTEGER NOT NULL DEFAULT '0', favicon_id INTEGER, frecency INTEGER NOT NULL DEFAULT '-1', last_visit_date INTEGER, guid TEXT, foreign_count INTEGER NOT NULL DEFAULT '0', PRIMARY KEY(id));")
 
+# Table not sure why it exists, just leaving it for now
 def Import_moz_anno_attributes():
 	cur.execute("INSERT INTO moz_anno_attributes VALUES (1, 'bookmarkProperties/description')")
         cur.execute("INSERT INTO moz_anno_attributes VALUES (3, 'URIProperties/characterSet')")
@@ -34,22 +38,33 @@ def Import_moz_anno_attributes():
         cur.execute("INSERT INTO moz_anno_attributes VALUES (9, 'livemark/feedURI')")
         cur.execute("INSERT INTO moz_anno_attributes VALUES (10, 'livemark/siteURI')")
 
+# Stupid function required to solve the guid problem for RSS feeds
 def generate_guid():
-	return ''.join([random.choice(string.ascii_lowercase) for i in range(16)])
-        
+	return ''.join([random.choice(string.ascii_lowercase) for i in range(12)])
+
+# import all bookmark structure into moz_bookmarks
+# Mozilla prunes moz_places to only contain entries that match moz_bookmarks
 def Import_moz_bookmarks():
-	cur.execute("INSERT INTO moz_bookmarks (id, type, fk, position, guid ) VALUES (1,2,0,0, 'root________')")
-        cur.execute("INSERT INTO moz_bookmarks (id, type, fk, position, guid ) VALUES (2,2,1,0, 'menu________')")
-        cur.execute("INSERT INTO moz_bookmarks (id, type, fk, position, guid ) VALUES (3,2,1,1, 'toolbar_____')")
-        cur.execute("INSERT INTO moz_bookmarks (id, type, fk, position, guid ) VALUES (4,2,1,2, 'tags________')")
-        cur.execute("INSERT INTO moz_bookmarks (id, type, fk, position, guid ) VALUES (5,2,1,3, 'unfiled_____')")
-	random_string = generate_guid()
+	# Roots
+	cur.execute("INSERT INTO moz_bookmarks (id, type, parent, position, guid ) VALUES (1,2,0,0, 'root________')")
+        cur.execute("INSERT INTO moz_bookmarks (id, type, parent, position, title, guid ) VALUES (2,2,1,0, 'Bookmarks Menu', 'menu________')")
+        cur.execute("INSERT INTO moz_bookmarks (id, type, parent, position, title, guid ) VALUES (3,2,1,1, 'Bookmarks Toolbar', 'toolbar_____')")
+        cur.execute("INSERT INTO moz_bookmarks (id, type, parent, position, title, guid ) VALUES (4,2,1,2, 'Tags', 'tags________')")
+        cur.execute("INSERT INTO moz_bookmarks (id, type, parent, position, title, guid ) VALUES (5,2,1,3, 'Unsorted Bookmarks', 'unfiled_____')")
+
+	# Generate example bookmarked pages
         for i in range(0,300):
 		insert = "INSERT INTO moz_bookmarks (id, type, fk, parent, position ) VALUES (" + str(i + 6) + ", 1, " + str(i) + ", 2, "+ str(i)  +")"
                 cur.execute(insert)
-	return
-	#cur.execute(".import moz_bookmarks.txt moz_bookmarks")
 
+        # Generate first half of example rss feeds
+        for i in range(0,20):
+		random_string = generate_guid()
+            	insert = "INSERT INTO moz_bookmarks (id, type, parent, position, title, guid ) VALUES (" + str(i + 306) + ", 2, 2, "+ str(i+306) + ", " + str(i) + ", '" + random_string +"')"
+                cur.execute(insert)
+	return
+
+# I'm not sure why this table exists but not sure why
 def Import_moz_bookmarks_roots():
 	cur.execute("INSERT INTO moz_bookmarks_roots VALUES ('places', 1)")
         cur.execute("INSERT INTO moz_bookmarks_roots VALUES ('menu', 2)")
@@ -57,15 +72,23 @@ def Import_moz_bookmarks_roots():
         cur.execute("INSERT INTO moz_bookmarks_roots VALUES ('tags', 4)")
         cur.execute("INSERT INTO moz_bookmarks_roots VALUES ('unfiled', 5)")
 
+# The second half of the bookmark question, in short the urls
+# moz_bookmarks, will not display if a matching moz_places does not exist
 def Import_moz_places():
 	for i in range(0, 300):
             	insert = "INSERT INTO moz_places (id, url) VALUES ( " + str(i) + ", 'http://" + str(i) + ".com')"
 		cur.execute(insert)
 
+# If you want to support RSS you need the entries that have an anno_attribute_id of 9
+# and if you want to see it, its expiration needs to be 4; I have no idea why
 def Import_moz_items_annos():
+	# Generate second half of example rss feeds
+        for i in range(0,10):
+            	insert = "INSERT INTO moz_items_annos (id, item_id, anno_attribute_id, content, expiration ) VALUES (" + str(i) + ", " + str(i+306) + ", 9, 'http://" + str(i) +".com/rss/link.rss', 4)"
+                cur.execute(insert)
     	return
-	#cur.execute(".import moz_items_annos.txt moz_items_annos")
 
+# The Indexes that must exist, otherwise problems
 def Create_Indexes():
 	cur.execute("CREATE INDEX moz_places_faviconindex ON moz_places (favicon_id);")
         cur.execute("CREATE INDEX moz_places_hostindex ON moz_places (rev_host);")
@@ -85,12 +108,14 @@ def Create_Indexes():
         cur.execute("CREATE UNIQUE INDEX moz_items_annos_itemattributeindex ON moz_items_annos (item_id, anno_attribute_id);")
         cur.execute("CREATE UNIQUE INDEX moz_keywords_placepostdata_uniqueindex ON moz_keywords (place_id, post_data);")
 
+# Finishing steps otherwise Firefox is unhappy and not sure why
 def Finish_Database():
 	cur.execute("PRAGMA user_version = 26;")
         cur.execute("PRAGMA journal_mode = WAL;")
         con.commit()
         #con.close()
 
+# After we are connected to the file go do your work
 with con:
 	create_tables()
         # Data
