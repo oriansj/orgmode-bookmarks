@@ -39,42 +39,66 @@ def folder(url, content, title, anno_attribute_id):
     # Thus far in testing only folders have gotten this far, a potential bug may occur here
     return True
 
+# Simple function for producing a desired number of stars
 def stars(depth):
-    a = ""
-    for i in range(1, depth):
-        a = a + '*'
 
-    return a + "* "
+    # This code is likely wrong but it works well enough
+    a = " "
+    for i in range(0, depth):
+        a = '*' + a
 
-def rss(a):
-    if a == 9:
+    return a
+
+# Determine if the element is an RSS link
+def rss(anno_attribute_id):
+
+    # All of them have an anno_attribute_id of 9
+    if anno_attribute_id == 9:
         return True
+
+    # Thus far that has been the only case and I sticking with it until proven wrong
     return False
 
-def content(a,b,c,d):
+# Determine how to format our output
+def content(url, content, title, anno_attribute_id):
 
-    if rss(d):
-        return '#' + b
-    
-    if a <> None:
-        return a
+    # if it is an rss link prepend #
+    if rss(anno_attribute_id):
+        return '#' + content
 
-    if b <> None:
-        return b
+    # If we have a url Use That
+    if url <> None:
+        return url
 
-    return c
+    # Otherwise attempt to use the content
+    if content <> None:
+        return content
 
+    # As an absolute last ditch use the Title information
+    return title
+
+# The iterative solution recursively called to our linear problem
 def read(index, title, depth):
+    # Place the folder's name as an org section
     f.write(stars(depth) + title + "\n")
+
+    # Ensure we can collapse subsectional lists
     f.write(stars(depth + 1) + "\n")
+
+    # Iteratively walk down the list of all bookmarks
     for row in rows:
+        # Only care about rows who's parent matches the index
         if row[1] == index:
+            # If it happens to be a folder recurse
             if folder(row[3], row[4], row[5], row[6]):
+                # And don't forget to increase our depth
                 read(row[0], row[5], depth + 1)
+            # If Not a folder simply toss it on
             else:
                 f.write(content(row[3], row[4], row[5], row[6]) + "\n")
 
-    f.write(stars(depth) + "\n")
+    # Add the terminating stars to deal with the long list problem
+    f.write(stars(depth) + " \n")
 
 with con:
     # I am uncertain of what the values 0 and 1 mean, so I am ignoring them entirely
