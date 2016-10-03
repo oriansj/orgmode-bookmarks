@@ -34,7 +34,19 @@ def Import_moz_anno_attributes():
         cur.execute("INSERT INTO moz_anno_attributes VALUES (9, 'livemark/feedURI')")
         cur.execute("INSERT INTO moz_anno_attributes VALUES (10, 'livemark/siteURI')")
 
+def generate_guid():
+	return ''.join([random.choice(string.ascii_lowercase) for i in range(16)])
+        
 def Import_moz_bookmarks():
+	cur.execute("INSERT INTO moz_bookmarks (id, type, fk, position, guid ) VALUES (1,2,0,0, 'root________')")
+        cur.execute("INSERT INTO moz_bookmarks (id, type, fk, position, guid ) VALUES (2,2,1,0, 'menu________')")
+        cur.execute("INSERT INTO moz_bookmarks (id, type, fk, position, guid ) VALUES (3,2,1,1, 'toolbar_____')")
+        cur.execute("INSERT INTO moz_bookmarks (id, type, fk, position, guid ) VALUES (4,2,1,2, 'tags________')")
+        cur.execute("INSERT INTO moz_bookmarks (id, type, fk, position, guid ) VALUES (5,2,1,3, 'unfiled_____')")
+	random_string = generate_guid()
+        for i in range(0,300):
+		insert = "INSERT INTO moz_bookmarks (id, type, fk, parent, position ) VALUES (" + str(i + 6) + ", 1, " + str(i) + ", 2, "+ str(i)  +")"
+                cur.execute(insert)
 	return
 	#cur.execute(".import moz_bookmarks.txt moz_bookmarks")
 
@@ -45,12 +57,8 @@ def Import_moz_bookmarks_roots():
         cur.execute("INSERT INTO moz_bookmarks_roots VALUES ('tags', 4)")
         cur.execute("INSERT INTO moz_bookmarks_roots VALUES ('unfiled', 5)")
 
-def generate_guid():
-	return ''.join([random.choice(string.ascii_lowercase) for i in range(16)])
-        
 def Import_moz_places():
 	for i in range(0, 300):
-		random_string = generate_guid()
             	insert = "INSERT INTO moz_places (id, url) VALUES ( " + str(i) + ", 'http://" + str(i) + ".com')"
 		cur.execute(insert)
 
