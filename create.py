@@ -53,14 +53,23 @@ def Import_moz_bookmarks():
         cur.execute("INSERT INTO moz_bookmarks (id, type, parent, position, title, guid ) VALUES (5,2,1,3, 'Unsorted Bookmarks', 'unfiled_____')")
 
 	# Generate example bookmarked pages
-        for i in range(0,300):
-		insert = "INSERT INTO moz_bookmarks (id, type, fk, parent, position ) VALUES (" + str(i + 6) + ", 1, " + str(i) + ", 2, "+ str(i)  +")"
+        # Firefox expects position ids to be 0 to N with no gaps
+        # Should the parent not exist or not be a folder the link will not show
+        # but will still exist 
+        for i in range(0,30):
+		for j in range(0,10):
+			insert = "INSERT INTO moz_bookmarks (id, type, fk, parent, position ) VALUES (" + str(i * 10 + j + 26) + ", 1, " + str(10 * i + j) + ", " + str(i+6) +", "+ str(j)  +")"
+			cur.execute(insert)
+
+        # Insert Folders
+        for i in range(0,10):
+            	insert = "INSERT INTO moz_bookmarks (id, type, parent, position, title) VALUES (" + str(i + 6) + ", 2, 2, "+ str(i+6) + ", " + str(i) + ")"
                 cur.execute(insert)
 
-        # Generate first half of example rss feeds
-        for i in range(0,20):
+	# Generate first half of example rss feeds
+        for i in range(0,10):
 		random_string = generate_guid()
-            	insert = "INSERT INTO moz_bookmarks (id, type, parent, position, title, guid ) VALUES (" + str(i + 306) + ", 2, 2, "+ str(i+306) + ", " + str(i) + ", '" + random_string +"')"
+            	insert = "INSERT INTO moz_bookmarks (id, type, parent, position, title, guid ) VALUES (" + str(i + 16) + ", 2, 2, "+ str(i+16) + ", " + str(i) + ", '" + random_string +"')"
                 cur.execute(insert)
 	return
 
@@ -84,7 +93,7 @@ def Import_moz_places():
 def Import_moz_items_annos():
 	# Generate second half of example rss feeds
         for i in range(0,10):
-            	insert = "INSERT INTO moz_items_annos (id, item_id, anno_attribute_id, content, expiration ) VALUES (" + str(i) + ", " + str(i+306) + ", 9, 'http://" + str(i) +".com/rss/link.rss', 4)"
+            	insert = "INSERT INTO moz_items_annos (id, item_id, anno_attribute_id, content, expiration ) VALUES (" + str(i) + ", " + str(i+16) + ", 9, 'http://" + str(i) +".com/rss/link.rss', 4)"
                 cur.execute(insert)
     	return
 
