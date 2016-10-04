@@ -1,3 +1,11 @@
 # Ignore sqlite files
 data/
 
+# Ignore temp files
+*.txt
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.html
+*.org
+

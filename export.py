@@ -64,8 +64,12 @@ def content(url, content, title, anno_attribute_id):
     if content <> None:
         return content
 
-    # As an absolute last ditch use the Title information
-    return title
+    # Attempt to use the Title information
+    if title <> None:
+        return title
+
+    # Well Shit, this is clearly an unknown
+    return "Unknown_Object"
 
 # The iterative solution recursively called to our linear problem
 def read(index, title, depth):
