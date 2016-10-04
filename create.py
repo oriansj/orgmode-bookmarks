@@ -38,10 +38,6 @@ def Import_moz_anno_attributes():
         cur.execute("INSERT INTO moz_anno_attributes VALUES (9, 'livemark/feedURI')")
         cur.execute("INSERT INTO moz_anno_attributes VALUES (10, 'livemark/siteURI')")
 
-# Stupid function required to solve the guid problem for RSS feeds
-def generate_guid():
-	return ''.join([random.choice(string.ascii_lowercase) for i in range(12)])
-
 # import all bookmark structure into moz_bookmarks
 # Mozilla prunes moz_places to only contain entries that match moz_bookmarks
 def Import_moz_bookmarks():
@@ -52,50 +48,41 @@ def Import_moz_bookmarks():
         cur.execute("INSERT INTO moz_bookmarks (id, type, parent, position, title, guid ) VALUES (4,2,1,2, 'Tags', 'tags________')")
         cur.execute("INSERT INTO moz_bookmarks (id, type, parent, position, title, guid ) VALUES (5,2,1,3, 'Unsorted Bookmarks', 'unfiled_____')")
 
-	# Generate example bookmarked pages
+def Insert_Bookmarks(UID, Parent, Position, URL):
         # Firefox expects position ids to be 0 to N with no gaps
         # Should the parent not exist or not be a folder the link will not show
         # but will still exist 
-        for i in range(0,30):
-		for j in range(0,10):
-			insert = "INSERT INTO moz_bookmarks (id, type, fk, parent, position ) VALUES (" + str(i * 10 + j + 26) + ", 1, " + str(10 * i + j) + ", " + str(i+6) +", "+ str(j)  +")"
-			cur.execute(insert)
+        insert = "INSERT INTO moz_bookmarks (id, type, fk, parent, position ) VALUES (" + UID + ", 1, " + UID + ", " + Parent +", "+ Position  +")"
+        cur.execute(insert)
 
-        # Insert Folders
-        for i in range(0,10):
-            	insert = "INSERT INTO moz_bookmarks (id, type, parent, position, title) VALUES (" + str(i + 6) + ", 2, 2, "+ str(i+6) + ", " + str(i) + ")"
-                cur.execute(insert)
+        # The second half of the bookmark question, in short the urls
+	# moz_bookmarks, will not display if a matching moz_places does not exist
+        insert = "INSERT INTO moz_places (id, url) VALUES ( " + UID + ", " + URL + ")"
+        cur.execute(insert)
 
-	# Generate first half of example rss feeds
-        for i in range(0,10):
-		random_string = generate_guid()
-            	insert = "INSERT INTO moz_bookmarks (id, type, parent, position, title, guid ) VALUES (" + str(i + 16) + ", 2, 2, "+ str(i+16) + ", " + str(i) + ", '" + random_string +"')"
-                cur.execute(insert)
-	return
+def Insert_Folders(UID, Parent, Position, Title):
+	insert = "INSERT INTO moz_bookmarks (id, type, parent, position, title) VALUES (" + UID + ", 2, " + Parent + ", " + Position + ", '" + Title + "')"
+	cur.execute(insert)
 
-# I'm not sure why this table exists but not sure why
+# If you want to support RSS you need the entries that have an anno_attribute_id of 9
+# and if you want to see it, its expiration needs to be 4; I have no idea why
+def Insert_RSS(UID, Parent, Position, URL):
+	# Generate first half of RSS feeds
+	# Stupid thing required to make working guids
+	GUID = ''.join([random.choice(string.ascii_lowercase) for i in range(12)])
+	insert = "INSERT INTO moz_bookmarks (id, type, parent, position, title, guid ) VALUES (" + UID + ", 2, " + Parent + ", "+ Position + ", " + URL + ", '" + GUID +"')"
+	cur.execute(insert)
+	# Generate second half of RSS feeds
+	insert = "INSERT INTO moz_items_annos (id, item_id, anno_attribute_id, content, expiration ) VALUES (" + UID + ", " + UID + ", 9, " + URL + ", 4)"
+	cur.execute(insert)
+
+# I'm not sure why this table exists
 def Import_moz_bookmarks_roots():
 	cur.execute("INSERT INTO moz_bookmarks_roots VALUES ('places', 1)")
         cur.execute("INSERT INTO moz_bookmarks_roots VALUES ('menu', 2)")
         cur.execute("INSERT INTO moz_bookmarks_roots VALUES ('toolbar', 3)")
         cur.execute("INSERT INTO moz_bookmarks_roots VALUES ('tags', 4)")
         cur.execute("INSERT INTO moz_bookmarks_roots VALUES ('unfiled', 5)")
-
-# The second half of the bookmark question, in short the urls
-# moz_bookmarks, will not display if a matching moz_places does not exist
-def Import_moz_places():
-	for i in range(0, 300):
-            	insert = "INSERT INTO moz_places (id, url) VALUES ( " + str(i) + ", 'http://" + str(i) + ".com')"
-		cur.execute(insert)
-
-# If you want to support RSS you need the entries that have an anno_attribute_id of 9
-# and if you want to see it, its expiration needs to be 4; I have no idea why
-def Import_moz_items_annos():
-	# Generate second half of example rss feeds
-        for i in range(0,10):
-            	insert = "INSERT INTO moz_items_annos (id, item_id, anno_attribute_id, content, expiration ) VALUES (" + str(i) + ", " + str(i+16) + ", 9, 'http://" + str(i) +".com/rss/link.rss', 4)"
-                cur.execute(insert)
-    	return
 
 # The Indexes that must exist, otherwise problems
 def Create_Indexes():
@@ -131,8 +118,19 @@ with con:
         Import_moz_anno_attributes()
         Import_moz_bookmarks()
         Import_moz_bookmarks_roots()
-        Import_moz_places()
-        Import_moz_items_annos()
+
+        # Insert example bookmarks
+        for i in range(0,30):
+		for j in range(0,10):
+			Insert_Bookmarks(str(i * 10 + j + 26), str(i + 6), str(j), "'http://" + str(i * 10 + j) + ".com'")
+
+        # Insert Example Folders
+        for i in range(0,10):
+		Insert_Folders(str(i + 6), "2", str(i + 6), str(i))
+
+        # Insert Example RSS
+        for i in range(0,10):
+		Insert_RSS(str(i + 16), "2", str(i + 16), "'http://" + str(i) + ".com/rss/link.rss'")
         
         Create_Indexes()
         Finish_Database()
