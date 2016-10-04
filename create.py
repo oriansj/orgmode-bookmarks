@@ -5,16 +5,10 @@ import os
 import string
 import random
 import pdb
+import getopt
 
-# Create a new blank file
-open('test.sqlite', 'w+').close()
-
-# Connect to that file
-con = sqlite3.connect('test.sqlite')
-cur = con.cursor()
-
-# The emacs org-file we indend to use, this could be done much better
-f = open('test2.org', 'r')
+# Uncomment to enable debugging
+# pdb.set_trace()
 
 # Create ALL of the Tables
 def create_tables():
@@ -148,9 +142,6 @@ def Process_Orgmode():
 	lines = f.readlines()
 	lines = [x.strip('\n') for x in lines]
 
-        # Uncomment to enable debugging
-	#pdb.set_trace()
-
 	for i in lines:
 		depth = i.count('*')
                 Entry = i.strip('*').strip()
@@ -194,6 +185,49 @@ def Process_Orgmode():
 
 		#print str(Identifier) + "\t:\t" + i
 	return
+
+# Place Holders for file names
+inputfile = ''
+outputfile = ''
+
+# Get the System Arguments
+try:
+	opts, args = getopt.getopt(sys.argv[1:],"hi:o:",["ifile=","ofile=","help"])
+except getopt.GetoptError:
+	print 'create.py -i <inputfile> -o <outputfile>'
+	sys.exit(2)
+
+# Parse the arguments
+for opt, arg in opts:
+	# Provide the standard help option
+	if opt in ('-h', "--help"):
+		print 'create.py -i <inputfile> -o <outputfile>'
+		sys.exit()
+	# Store the input file name
+	elif opt in ("-i", "--ifile"):
+		inputfile = arg
+	# Store the output file name
+	elif opt in ("-o", "--ofile"):
+		outputfile = arg
+
+# If we are missing either abort NOW
+if "" == inputfile or "" == outputfile:
+	print 'create.py -i <inputfile> -o <outputfile>'
+	sys.exit(2)
+
+# For the users, might remove later
+print "Input file is " + inputfile.strip()
+print "Output file is " + outputfile.strip()
+
+# Create a new blank file
+open(outputfile.strip(), 'w+').close()
+
+# Connect to that file
+con = sqlite3.connect(outputfile.strip())
+cur = con.cursor()
+
+# The emacs org-file we indend to use, this could be done much better
+f = open(inputfile.strip(), 'r')
 
 # After we are connected to the file go do your work
 with con:
