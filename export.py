@@ -2,20 +2,10 @@
 import sqlite3
 import sys
 import pdb
-
-# Connect to the sqlite file
-con = sqlite3.connect('places.sqlite')
-
-# The emacs org-file we indend to use, this could be done much better
-f = open('test2.org', 'w')
-
-# Get all the shit we care about out of the database
-cur = con.cursor()
-cur.execute("SELECT moz_bookmarks.id, parent, position, url, content, moz_bookmarks.title, anno_attribute_id FROM moz_bookmarks LEFT JOIN moz_places ON moz_bookmarks.fk = moz_places.id LEFT JOIN moz_items_annos ON moz_bookmarks.id = moz_items_annos.item_id WHERE ifnull(anno_attribute_id, -1) in (-1, 1, 8, 9) AND parent > 1 ORDER BY parent, position;")
-rows = cur.fetchall()
+import getopt
 
 # Uncomment to enable debugging
-#pdb.set_trace()
+# pdb.set_trace()
 
 # Determine if a given row represents a folder
 def folder(url, content, title, anno_attribute_id):
@@ -100,20 +90,63 @@ def read(index, title, depth):
     # Add the terminating stars to deal with the long list problem
     f.write(stars(depth) + " \n")
 
-with con:
-    # I am uncertain of what the values 0 and 1 mean, so I am ignoring them entirely
-    
-    # We know a parent value of 2 in moz_bookmarks indicates placed in Bookmarks Menu
-    read(2, "Bookmarks Menu",1)
-    
-    # We know a parent value of 3 in moz_bookmarks indicates placed in Bookmarks toolbar
-    read(3, "Bookmarks toolbar", 1)
-    
-    # We know a parent value of 4 in moz_bookmarks indicates item is a tag
-    # But I don't feel like supporting tags at this time
-    
-    # We know a parent value of 5 in moz_bookmarks indicates placed in unsorted folder
-    read(5, "Unsorted folder", 1)
+# Place Holders for file names
+inputfile = ''
+outputfile = ''
 
-    # All other values appear to be folders that have a parent that is another folder or one of the values above
-    
+# Get the System Arguments
+try:
+	opts, args = getopt.getopt(sys.argv[1:],"hi:o:",["ifile=","ofile=","help"])
+except getopt.GetoptError:
+	print 'export.py -i <inputfile> -o <outputfile>'
+	sys.exit(2)
+
+# Parse the arguments
+for opt, arg in opts:
+	# Provide the standard help option
+	if opt in ('-h', "--help"):
+		print 'export.py -i <inputfile> -o <outputfile>'
+		sys.exit()
+	# Store the input file name
+	elif opt in ("-i", "--ifile"):
+		inputfile = arg
+	# Store the output file name
+	elif opt in ("-o", "--ofile"):
+		outputfile = arg
+
+# If we are missing either abort NOW
+if "" == inputfile or "" == outputfile:
+	print 'export.py -i <inputfile> -o <outputfile>'
+	sys.exit(2)
+
+# For the users, might remove later
+print "Input file is " + inputfile.strip()
+print "Output file is " + outputfile.strip()
+
+# Connect to the input file (needs to be sqlite)
+con = sqlite3.connect(inputfile.strip())
+
+# The emacs org-file we indend to use to write our crap
+f = open(outputfile.strip(), 'w')
+
+# Get all the shit we care about out of the database
+cur = con.cursor()
+cur.execute("SELECT moz_bookmarks.id, parent, position, url, content, moz_bookmarks.title, anno_attribute_id FROM moz_bookmarks LEFT JOIN moz_places ON moz_bookmarks.fk = moz_places.id LEFT JOIN moz_items_annos ON moz_bookmarks.id = moz_items_annos.item_id WHERE ifnull(anno_attribute_id, -1) in (-1, 1, 8, 9) AND parent > 1 ORDER BY parent, position;")
+rows = cur.fetchall()
+
+with con:
+	# I am uncertain of what the values 0 and 1 mean, so I am ignoring them entirely
+
+	# We know a parent value of 2 in moz_bookmarks indicates placed in Bookmarks Menu
+	read(2, "Bookmarks Menu",1)
+
+	# We know a parent value of 3 in moz_bookmarks indicates placed in Bookmarks toolbar
+	read(3, "Bookmarks toolbar", 1)
+
+	# We know a parent value of 4 in moz_bookmarks indicates item is a tag
+	# But I don't feel like supporting tags at this time
+
+	# We know a parent value of 5 in moz_bookmarks indicates placed in unsorted folder
+	read(5, "Unsorted folder", 1)
+
+	# All other values appear to be folders that have a parent that is another folder or one of the values above
