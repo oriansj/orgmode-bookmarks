@@ -69,6 +69,9 @@ def content(url, content, title, anno_attribute_id):
 
 # The iterative solution recursively called to our linear problem
 def read(index, title, depth):
+    # Strip non-ascii chars
+    title = ''.join([x for x in title if ord(x) < 128])
+    
     # Place the folder's name as an org section
     f.write(stars(depth) + title + "\n")
 
