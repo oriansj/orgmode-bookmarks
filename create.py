@@ -74,10 +74,10 @@ def Insert_RSS(UID, Parent, Position, URL):
 	# Generate first half of RSS feeds
 	# Stupid thing required to make working guids
 	GUID = ''.join([random.choice(string.ascii_lowercase) for i in range(12)])
-	insert = "INSERT INTO moz_bookmarks (id, type, parent, position, title, guid ) VALUES (" + str(UID) + ", 2, " + str(Parent) + ", "+ str(Position) + ", " + URL + ", '" + GUID +"')"
+	insert = "INSERT INTO moz_bookmarks (id, type, parent, position, title, guid ) VALUES (" + str(UID) + ", 2, " + str(Parent) + ", "+ str(Position) + ", '" + URL + "', '" + GUID +"')"
 	cur.execute(insert)
 	# Generate second half of RSS feeds
-	insert = "INSERT INTO moz_items_annos (id, item_id, anno_attribute_id, content, expiration ) VALUES (" + str(UID) + ", " + str(UID) + ", 9, " + URL + ", 4)"
+	insert = "INSERT INTO moz_items_annos (id, item_id, anno_attribute_id, content, expiration ) VALUES (" + str(UID) + ", " + str(UID) + ", 9, '" + URL + "', 4)"
 	cur.execute(insert)
 
 # I'm not sure why this table exists
@@ -156,9 +156,17 @@ def Process_Orgmode():
                 Entry = i.strip('*').strip()
 		Identifier = len(Entry)
 
-                # Deal with bookmarks/RSS
-                if 0 == depth:
+                # Deal with bookmarks
+                if 0 == depth and '#' != Entry[0]:
+                        #print "Inserting BookMark"
                         Insert_Bookmarks(UID_Counter, Parent_UID, Position_Counter, Entry)
+                        UID_Counter = UID_Counter + 1
+                        Position_Counter = Position_Counter + 1
+
+                # Deal with RSS
+                if 0 == depth and '#' == Entry[0]:
+                        #print "Inserting RSS"
+                        Insert_RSS(UID_Counter, Parent_UID, Position_Counter, Entry[1:])
                         UID_Counter = UID_Counter + 1
                         Position_Counter = Position_Counter + 1
 
@@ -169,6 +177,7 @@ def Process_Orgmode():
 
 		# Deal With Folders
 		if 1 < depth and 0 < Identifier:
+                        #print "Inserting Folder"
 			Insert_Folders(UID_Counter, Parent_UID, Position_Counter, Entry)
                         Last_Depth = depth
                         Position_Stack.append(Position_Counter)
@@ -183,7 +192,7 @@ def Process_Orgmode():
                         Position_Counter = Position_Stack.pop()
                         Parent_UID = UID_Stack.pop()
 
-		print str(Identifier) + "\t:\t" + i
+		#print str(Identifier) + "\t:\t" + i
 	return
 
 # After we are connected to the file go do your work
