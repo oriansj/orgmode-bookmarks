@@ -1,0 +1,15 @@
+* Unreleased
+** Added
+
+** Changed
+
+** Fixed
+
+** Removed
+
+* 0.0.1 - 2016-10-03
+** Added
++ Initial draft of change log added
++ Program for extracting bookmarks into an org format file
++ Program for converting org format files into sqlite files used by Mozilla for bookmarks
+
