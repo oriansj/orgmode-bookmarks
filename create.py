@@ -4,6 +4,7 @@ import sys
 import os
 import string
 import random
+import pdb
 
 # Create a new blank file
 open('test.sqlite', 'w+').close()
@@ -11,6 +12,9 @@ open('test.sqlite', 'w+').close()
 # Connect to that file
 con = sqlite3.connect('test.sqlite')
 cur = con.cursor()
+
+# The emacs org-file we indend to use, this could be done much better
+f = open('test2.org', 'r')
 
 # Create ALL of the Tables
 def create_tables():
@@ -52,16 +56,16 @@ def Insert_Bookmarks(UID, Parent, Position, URL):
         # Firefox expects position ids to be 0 to N with no gaps
         # Should the parent not exist or not be a folder the link will not show
         # but will still exist 
-        insert = "INSERT INTO moz_bookmarks (id, type, fk, parent, position ) VALUES (" + UID + ", 1, " + UID + ", " + Parent +", "+ Position  +")"
+        insert = "INSERT INTO moz_bookmarks (id, type, fk, parent, position ) VALUES (" + str(UID) + ", 1, " + str(UID) + ", " + str(Parent) +", "+ str(Position) +")"
         cur.execute(insert)
 
         # The second half of the bookmark question, in short the urls
 	# moz_bookmarks, will not display if a matching moz_places does not exist
-        insert = "INSERT INTO moz_places (id, url) VALUES ( " + UID + ", " + URL + ")"
+        insert = "INSERT INTO moz_places (id, url) VALUES ( " + str(UID) + ", '" + URL + "')"
         cur.execute(insert)
 
 def Insert_Folders(UID, Parent, Position, Title):
-	insert = "INSERT INTO moz_bookmarks (id, type, parent, position, title) VALUES (" + UID + ", 2, " + Parent + ", " + Position + ", '" + Title + "')"
+	insert = "INSERT INTO moz_bookmarks (id, type, parent, position, title) VALUES (" + str(UID) + ", 2, " + str(Parent) + ", " + str(Position) + ", '" + Title + "')"
 	cur.execute(insert)
 
 # If you want to support RSS you need the entries that have an anno_attribute_id of 9
@@ -70,10 +74,10 @@ def Insert_RSS(UID, Parent, Position, URL):
 	# Generate first half of RSS feeds
 	# Stupid thing required to make working guids
 	GUID = ''.join([random.choice(string.ascii_lowercase) for i in range(12)])
-	insert = "INSERT INTO moz_bookmarks (id, type, parent, position, title, guid ) VALUES (" + UID + ", 2, " + Parent + ", "+ Position + ", " + URL + ", '" + GUID +"')"
+	insert = "INSERT INTO moz_bookmarks (id, type, parent, position, title, guid ) VALUES (" + str(UID) + ", 2, " + str(Parent) + ", "+ str(Position) + ", " + URL + ", '" + GUID +"')"
 	cur.execute(insert)
 	# Generate second half of RSS feeds
-	insert = "INSERT INTO moz_items_annos (id, item_id, anno_attribute_id, content, expiration ) VALUES (" + UID + ", " + UID + ", 9, " + URL + ", 4)"
+	insert = "INSERT INTO moz_items_annos (id, item_id, anno_attribute_id, content, expiration ) VALUES (" + str(UID) + ", " + str(UID) + ", 9, " + URL + ", 4)"
 	cur.execute(insert)
 
 # I'm not sure why this table exists
@@ -111,6 +115,77 @@ def Finish_Database():
         con.commit()
         #con.close()
 
+def determine_root(string):
+        # Deal with the special case of closing "*"
+        if "" == string:
+                return -1
+
+        # Handle Bookmarks Menu
+        if "Bookmarks Menu" == string:
+                return 2
+
+        # Handle Bookmarks Toolbar
+        if "Bookmarks toolbar" == string:
+                return 3
+
+        # Handle Unsorted Bookmarks
+        if "Unsorted folder" == string:
+                return 5
+
+        # Everything else ABORT hard and fast
+        raise ValueError("I don't understand this org file, bailing so that you can troubleshoot")
+
+def Process_Orgmode():
+	# Global tracking variables
+	UID_Counter = 6
+	Parent_UID = -1
+	Position_Counter = 0
+        Last_Depth = 0
+
+	# Stacks for State machine
+	UID_Stack = []
+	Position_Stack = []
+	lines = f.readlines()
+	lines = [x.strip('\n') for x in lines]
+
+        # Uncomment to enable debugging
+	#pdb.set_trace()
+
+	for i in lines:
+		depth = i.count('*')
+                Entry = i.strip('*').strip()
+		Identifier = len(Entry)
+
+                # Deal with bookmarks/RSS
+                if 0 == depth:
+                        Insert_Bookmarks(UID_Counter, Parent_UID, Position_Counter, Entry)
+                        UID_Counter = UID_Counter + 1
+                        Position_Counter = Position_Counter + 1
+
+		# Deal with Root Entries
+                if 1 == depth:
+			Parent_UID = determine_root(Entry)
+                        Last_Depth = 1
+
+		# Deal With Folders
+		if 1 < depth and 0 < Identifier:
+			Insert_Folders(UID_Counter, Parent_UID, Position_Counter, Entry)
+                        Last_Depth = depth
+                        Position_Stack.append(Position_Counter)
+                        Position_Counter = 0
+                        UID_Stack.append(Parent_UID)
+			Parent_UID = UID_Counter
+                        UID_Counter = UID_Counter + 1
+
+		# Deal with closing stars
+		if 1 < depth and 0 == Identifier and Last_Depth == depth:
+			Last_Depth = depth - 1
+                        Position_Counter = Position_Stack.pop()
+                        Parent_UID = UID_Stack.pop()
+
+		print str(Identifier) + "\t:\t" + i
+	return
+
 # After we are connected to the file go do your work
 with con:
 	create_tables()
@@ -119,18 +194,8 @@ with con:
         Import_moz_bookmarks()
         Import_moz_bookmarks_roots()
 
-        # Insert example bookmarks
-        for i in range(0,30):
-		for j in range(0,10):
-			Insert_Bookmarks(str(i * 10 + j + 26), str(i + 6), str(j), "'http://" + str(i * 10 + j) + ".com'")
-
-        # Insert Example Folders
-        for i in range(0,10):
-		Insert_Folders(str(i + 6), "2", str(i + 6), str(i))
-
-        # Insert Example RSS
-        for i in range(0,10):
-		Insert_RSS(str(i + 16), "2", str(i + 16), "'http://" + str(i) + ".com/rss/link.rss'")
+        # Insert Bookmarks from file
+        Process_Orgmode()
         
         Create_Indexes()
         Finish_Database()
