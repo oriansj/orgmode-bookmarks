@@ -47,11 +47,29 @@ def Import_moz_bookmarks():
         cur.execute("INSERT INTO moz_bookmarks (id, type, parent, position, title, guid ) VALUES (5,2,1,3, 'Unsorted Bookmarks', 'unfiled_____')")
 
 def Insert_Bookmarks(UID, Parent, Position, URL):
+        # Since all URLs MUST be unique
+        # Check for duplicates first
+        check = "SELECT id, url FROM moz_places WHERE url = '" + URL + "';"
+        cur.execute(check)
+        fk = cur.fetchall()
+
+        # Use that index if it exists
+        if [] != fk:
+                fk, rest = fk[0]
+        else:
+                fk = UID
+
+	fk = str(fk)
+
         # Firefox expects position ids to be 0 to N with no gaps
         # Should the parent not exist or not be a folder the link will not show
         # but will still exist 
-        insert = "INSERT INTO moz_bookmarks (id, type, fk, parent, position ) VALUES (" + str(UID) + ", 1, " + str(UID) + ", " + str(Parent) +", "+ str(Position) +")"
+        insert = "INSERT INTO moz_bookmarks (id, type, fk, parent, position ) VALUES (" + str(UID) + ", 1, " + fk + ", " + str(Parent) +", "+ str(Position) +")"
         cur.execute(insert)
+
+        # If it already existed, we can skip this step
+        if fk != str(UID):
+                return
 
         # The second half of the bookmark question, in short the urls
 	# moz_bookmarks, will not display if a matching moz_places does not exist
